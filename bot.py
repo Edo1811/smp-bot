@@ -14,7 +14,10 @@ SERVER_PORT = int(os.getenv("SERVER_PORT"))
 
 # Intents & client
 intents = discord.Intents.default()
-bot = discord.Client(intents=intents)
+intents.message_content = True  # Required for commands
+intents.members = True          # If you use member events
+
+bot = commands.Bot(command_prefix="/", intents=intents)
 tree = app_commands.CommandTree(bot)
 
 REPORTS_FILE = os.path.join("data", "reports.json")
@@ -189,4 +192,5 @@ async def on_ready():
         print(f"🔗 Synced {len(synced)} slash commands")
     except Exception as e:
         print(f"⚠️ Failed to sync commands: {e}")
+
 
