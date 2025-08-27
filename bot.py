@@ -170,7 +170,9 @@ async def update_status_channel():
 @bot.event
 async def on_ready():
     await tree.sync()
-    bot.loop.create_task(update_status_channel())
     print(f"✅ Logged in as {bot.user}")
 
-bot.run(TOKEN)
+    # Load cogs automatically
+    for cog in ["utility", "moderation", "reports"]:
+        await bot.load_extension(f"cogs.{cog}")
+
