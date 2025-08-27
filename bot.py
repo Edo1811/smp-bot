@@ -174,6 +174,13 @@ async def update_status_channel():
         await asyncio.sleep(60)
 
 # On bot startup
+try:
+    bot.run(TOKEN)
+except Exception as e:
+    import traceback
+    print("❌ Bot failed to start:")
+    traceback.print_exc()
+
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
@@ -182,3 +189,4 @@ async def on_ready():
         print(f"🔗 Synced {len(synced)} slash commands")
     except Exception as e:
         print(f"⚠️ Failed to sync commands: {e}")
+
