@@ -176,11 +176,9 @@ async def update_status_channel():
 # On bot startup
 @bot.event
 async def on_ready():
-    await tree.sync()
     print(f"✅ Logged in as {bot.user}")
-
-    # Load cogs automatically
-    for cog in ["utility", "moderation", "reports"]:
-        await bot.load_extension(f"cogs.{cog}")
-
-
+    try:
+        synced = await bot.tree.sync()
+        print(f"🔗 Synced {len(synced)} slash commands")
+    except Exception as e:
+        print(f"⚠️ Failed to sync commands: {e}")
