@@ -17,12 +17,19 @@ intents = discord.Intents.default()
 bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
-# Load existing reports if file exists
-if os.path.exists("reports.json"):
-    with open("reports.json", "r") as f:
+REPORTS_FILE = os.path.join("data", "reports.json")
+
+if not os.path.exists(REPORTS_FILE):
+    with open(REPORTS_FILE, "w") as f:
+        json.dump([], f)
+
+with open(REPORTS_FILE, "r") as f:
+    try:
         reports = json.load(f)
-else:
-    reports = []
+    except json.JSONDecodeError:
+        reports = []
+        with open(REPORTS_FILE, "w") as f2:
+            json.dump(reports, f2)
 
 # Slash command: check server status
 import asyncio
@@ -175,4 +182,5 @@ async def on_ready():
     # Load cogs automatically
     for cog in ["utility", "moderation", "reports"]:
         await bot.load_extension(f"cogs.{cog}")
+
 
