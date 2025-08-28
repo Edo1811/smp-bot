@@ -7,16 +7,6 @@ class Utility(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # /events — Show upcoming SMP events
-    @app_commands.command(name="events", description="View upcoming SMP events")
-    async def events(self, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title="📅 Upcoming SMP Events",
-            description="> 1. PvP Tournament — 5th Sept\n> 2. Building Contest — 12th Sept\n> 3. Ender Dragon Raid — 20th Sept",
-            color=discord.Color.purple()
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
     # /help — List available commands
     @app_commands.command(name="help", description="Show a list of all commands")
     async def help_command(self, interaction: discord.Interaction):
@@ -70,3 +60,4 @@ class Utility(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))
+
