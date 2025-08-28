@@ -1,62 +1,118 @@
-import discord
-from discord import app_commands
-from discord.ext import commands
+import os
 import json
+import asyncio
+import aiohttp
+import discord
+from discord.ext import commands
+from discord import app_commands
+from mcstatus import JavaServer
+from dotenv import load_dotenv
+from keep_alive import keep_alive
 
-class Utility(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+# =========================================================
+#   KEEP-ALIVE SERVER FOR RENDER
+# =========================================================
+keep_alive()
 
-    # /help — List available commands
-    @app_commands.command(name="help", description="Show a list of all commands")
-    async def help_command(self, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title="📜 FrogSMP Bot Commands",
-            description="Here's everything I can do:",
-            color=discord.Color.blue()
-        )
-        embed.add_field(
-            name="🎮 Player Commands",
-            value="`/status` `/online` `/events` `/rank` `/leaderboard` `/donors`",
-            inline=False
-        )
-        embed.add_field(
-            name="🛠️ Staff Commands",
-            value="`/kick` `/ban` `/clear` `/mute` `/viewreports` `/deletereport`",
-            inline=False
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+# =========================================================
+#   LOAD ENV VARIABLES
+# =========================================================
+load_dotenv()
+TOKEN = os.getenv("DISCORD_TOKEN")
+SERVER_IP = os.getenv("SERVER_IP")
+SERVER_PORT = int(os.getenv("SERVER_PORT", "25565"))
+RENDER_URL = os.getenv("RENDER_URL")  # <-- Add this in Render env variables
 
-    # /rank — Show P2W rank
-    @app_commands.command(name="rank", description="Show your current rank")
-    async def rank(self, interaction: discord.Interaction):
-        with open("data/ranks.json", "r") as f:
-            ranks = json.load(f)
-        user = str(interaction.user.id)
-        rank = ranks.get(user, "No Rank")
-        await interaction.response.send_message(f"🏆 **Your rank:** `{rank}`", ephemeral=True)
+# =========================================================
+#   CHECK REQUIRED VARIABLES
+# =========================================================
+if not TOKEN:
+    raise RuntimeError("❌ Missing DISCORD_TOKEN in environment variables!")
+if not SERVER_IP:
+    print("⚠️ Warning: SERVER_IP is missing — /status and /online will fail!")
 
-    # /leaderboard — Sorted by kills
-    @app_commands.command(name="leaderboard", description="View top players by kills")
-    async def leaderboard(self, interaction: discord.Interaction):
-        with open("data/kills.json", "r") as f:
-            kills = json.load(f)
-        sorted_kills = sorted(kills.items(), key=lambda x: x[1], reverse=True)
-        top_players = "\n".join([f"**{i+1}.** <@{player}> — `{count}` kills"
-                                for i, (player, count) in enumerate(sorted_kills[:10])])
-        embed = discord.Embed(title="🏹 Kill Leaderboard", description=top_players, color=discord.Color.red())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+# =========================================================
+#   ENSURE DATA FOLDER & FILES EXIST
+# =========================================================
+os.makedirs("data", exist_ok=True)
+required_files = {
+    "kills.json": {},
+    "donors.json": [],
+    "events.json": [],
+    "ranks.json": {},
+    "reports.json": []
+}
+for filename, default_content in required_files.items():
+    filepath = os.path.join("data", filename)
+    if not os.path.exists(filepath):
+        with open(filepath, "w") as f:
+            json.dump(default_content, f, indent=4)
 
-    # /donors — Renamed to avoid conflict
-    @app_commands.command(name="donors", description="View top supporters")
-    async def donors(self, interaction: discord.Interaction):
-        with open("data/donors.json", "r") as f:
-            donors = json.load(f)
-        sorted_donors = sorted(donors.items(), key=lambda x: x[1], reverse=True)
-        top_donors = "\n".join([f"**{i+1}.** {name} — `${amount}`"
-                               for i, (name, amount) in enumerate(sorted_donors)])
-        embed = discord.Embed(title="💎 Top Donors", description=top_donors, color=discord.Color.gold())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+# =========================================================
+#   DISCORD BOT SETUP
+# =========================================================
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix="/", intents=intents)
+tree = bot.tree
 
-async def setup(bot):
-    await bot.add_cog(Utility(bot))
+# =========================================================
+#   SELF-PING TO KEEP BOT ALIVE ON RENDER
+# =========================================================
+async def self_ping():
+    await bot.wait_until_ready()
+    if not RENDER_URL:
+        print("⚠️ RENDER_URL not set. Self-ping disabled.")
+        return
+
+    while not bot.is_closed():
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(RENDER_URL):
+                    pass
+            print(f"✅ Self-pinged {RENDER_URL}")
+        except Exception as e:
+            print(f"⚠️ Self-ping failed: {e}")
+        await asyncio.sleep(150)  # Ping every 2.5 minutes
+
+# =========================================================
+#   LOAD COGS AUTOMATICALLY
+# =========================================================
+async def load_cogs():
+    cogs_dir = "./cogs"
+    if not os.path.exists(cogs_dir):
+        print("⚠️ No 'cogs' folder found!")
+        return
+
+    for filename in os.listdir(cogs_dir):
+        if filename.endswith(".py"):
+            try:
+                await bot.load_extension(f"cogs.{filename[:-3]}")
+                print(f"🔹 Loaded cog: {filename}")
+            except Exception as e:
+                print(f"❌ Failed to load cog {filename}: {e}")
+
+# =========================================================
+#   BOT STARTUP
+# =========================================================
+@bot.event
+async def on_ready():
+    print(f"🤖 Logged in as {bot.user} (ID: {bot.user.id})")
+    await load_cogs()
+
+    try:
+        synced = await bot.tree.sync()
+        print(f"🔗 Synced {len(synced)} slash commands globally!")
+    except Exception as e:
+        print(f"❌ Failed to sync slash commands: {e}")
+
+    bot.loop.create_task(self_ping())
+
+# =========================================================
+#   RUN THE BOT
+# =========================================================
+try:
+    bot.run(TOKEN)
+except Exception:
+    import traceback
+    print("❌ Bot failed to start:")
+    traceback.print_exc()
