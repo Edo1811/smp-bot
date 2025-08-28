@@ -13,7 +13,7 @@ class Donors(commands.Cog):
     @app_commands.command(name="topdonors", description="Show the top donors")
     async def topdonors(self, interaction: discord.Interaction):
         if not os.path.exists(DONORS_FILE):
-            await interaction.response.send_message("No donors found.", ephemeral=True)
+            await interaction.response.send_message("No donors found.", ephemeral=False)
             return
 
         with open(DONORS_FILE, "r") as f:
