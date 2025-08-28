@@ -1,1 +1,4 @@
-{}
+[
+    {"name": "Anonymous", "amount": 10},
+    {"name": "frogdev1", "amount": 10}
+]
