@@ -13,7 +13,7 @@ class Events(commands.Cog):
     @app_commands.command(name="events", description="Show upcoming events")
     async def events(self, interaction: discord.Interaction):
         if not os.path.exists(EVENTS_FILE):
-            await interaction.response.send_message("No events found.", ephemeral=True)
+            await interaction.response.send_message("📭 No events found.", ephemeral=True)
             return
 
         with open(EVENTS_FILE, "r") as f:
@@ -27,7 +27,7 @@ class Events(commands.Cog):
                 inline=False
             )
 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=False)
 
 async def setup(bot):
     await bot.add_cog(Events(bot))
