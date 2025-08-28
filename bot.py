@@ -5,8 +5,11 @@ from discord.ext import commands
 from discord import app_commands
 from mcstatus import JavaServer
 from dotenv import load_dotenv
-import asyncio
 from keep_alive import keep_alive
+import os
+
+# Start the web server
+keep_alive()
 
 # Load .env variables
 load_dotenv()
@@ -155,13 +158,30 @@ async def on_ready():
     except Exception as e:
         print(f"⚠️ Failed to sync commands: {e}")
     bot.loop.create_task(update_status_channel())
+import asyncio
+import aiohttp
+
+async def self_ping():
+    await bot.wait_until_ready()
+    url = "https://YOUR_RENDER_URL.onrender.com"  # Replace with your Render app's URL
+    while not bot.is_closed():
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url):
+                    pass  # We don't need the response
+            await asyncio.sleep(150)  # Ping every 2.5 minutes
+        except Exception as e:
+            print(f"Self-ping failed: {e}")
+            await asyncio.sleep(150)
+
+bot.loop.create_task(self_ping())
 
 # Start bot safely
 try:
-    keep_alive()
     bot.run(TOKEN)
 except Exception as e:
     import traceback
     print("❌ Bot failed to start:")
     traceback.print_exc()
+
 
