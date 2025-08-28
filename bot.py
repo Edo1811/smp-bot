@@ -6,6 +6,7 @@ from discord import app_commands
 from mcstatus import JavaServer
 from dotenv import load_dotenv
 import asyncio
+from keep_alive import keep_alive
 
 # Load .env variables
 load_dotenv()
@@ -157,8 +158,10 @@ async def on_ready():
 
 # Start bot safely
 try:
+    keep_alive()
     bot.run(TOKEN)
 except Exception as e:
     import traceback
     print("❌ Bot failed to start:")
     traceback.print_exc()
+
